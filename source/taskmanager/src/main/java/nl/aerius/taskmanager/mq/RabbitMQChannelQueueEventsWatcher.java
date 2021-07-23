@@ -97,6 +97,7 @@ class RabbitMQChannelQueueEventsWatcher {
       @Override
       public void handleDelivery(final String consumerTag, final Envelope envelope, final AMQP.BasicProperties properties, final byte[] body)
           throws IOException {
+        Thread.currentThread().setName("RabbitMQChannelQueueEventsWatcher");
         final Map<String, Object> headers = properties.getHeaders();
         final Object queue = headers.get(HEADER_PARAM_QUEUE);
         final String queueName = queue == null ? null : queue.toString();

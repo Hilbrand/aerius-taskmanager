@@ -78,6 +78,7 @@ class RabbitMQMessageConsumer extends DefaultConsumer {
   @Override
   public void handleDelivery(final String consumerTag, final Envelope envelope,
       final BasicProperties properties, final byte[] body) throws IOException {
+    Thread.currentThread().setName("RabbitMQMessageConsumer " + queueName);
     // take care of cases where original client did not supply messageId by making one ourselves.
     BasicProperties actualProperties = properties;
     if (properties.getMessageId() == null) {
