@@ -72,17 +72,17 @@ class TaskDispatcherTest {
   @Timeout(3000)
   void testNoFreeWorkers() throws InterruptedException {
     // Add Worker which will unlock
-    workerPool.onNumberOfWorkersUpdate(1, 0);
+    workerPool.onNumberOfWorkersUpdate(1, 0, 0);
     executor.execute(dispatcher);
     await().until(() -> dispatcher.getState() == State.WAIT_FOR_TASK);
     // Remove worker, 1 worker locked but at this point no actual workers available.
-    workerPool.onNumberOfWorkersUpdate(0, 0);
+    workerPool.onNumberOfWorkersUpdate(0, 0, 0);
     // Send task, should get NoFreeWorkersException in dispatcher.
     forwardTaskAsync(createTask(), null);
     // Dispatcher should go back to wait for worker to become available.
     await().until(() -> dispatcher.getState() == State.WAIT_FOR_WORKER);
     assertEquals(0, workerPool.getCurrentWorkerSize(), "WorkerPool should be empty");
-    workerPool.onNumberOfWorkersUpdate(1, 0);
+    workerPool.onNumberOfWorkersUpdate(1, 0, 0);
     assertEquals(1, workerPool.getCurrentWorkerSize(), "WorkerPool should have 1 running");
   }
 
@@ -93,7 +93,7 @@ class TaskDispatcherTest {
     final Future<?> future = forwardTaskAsync(task, null);
     executor.execute(dispatcher);
     await().until(() -> dispatcher.isLocked(task));
-    workerPool.onNumberOfWorkersUpdate(1, 0); //add worker which will unlock
+    workerPool.onNumberOfWorkersUpdate(1, 0, 0); //add worker which will unlock
     await().until(() -> dispatcher.getState() == State.WAIT_FOR_WORKER);
     await().until(() -> future.isDone());
     assertFalse(future.isCancelled(), "Taskconsumer must be unlocked at this point without error");
@@ -108,7 +108,7 @@ class TaskDispatcherTest {
     final Future<?> future = forwardTaskAsync(task, null);
     await().until(() -> dispatcher.isLocked(task));
     await().until(() -> dispatcher.getState() == State.WAIT_FOR_WORKER);
-    workerPool.onNumberOfWorkersUpdate(2, 0); //add worker which will unlock
+    workerPool.onNumberOfWorkersUpdate(2, 0, 0); //add worker which will unlock
     await().until(() -> !dispatcher.isLocked(task));
     // Now force the issue.
     assertSame(TaskDispatcher.State.WAIT_FOR_TASK, dispatcher.getState(), "Taskdispatcher must be waiting for task");
@@ -131,19 +131,19 @@ class TaskDispatcherTest {
     await().until(() -> dispatcher.isLocked(task));
     await().until(() -> dispatcher.getState() == State.WAIT_FOR_WORKER);
     // Now open up a worker
-    workerPool.onNumberOfWorkersUpdate(1, 0);
+    workerPool.onNumberOfWorkersUpdate(1, 0, 0);
     // At this point the exception should be thrown. This could be the case when rabbitmq connection is lost for a second.
     // Wait for it to be unlocked again
     await().until(() -> dispatcher.getState() == State.WAIT_FOR_TASK);
     //simulate workerpool being reset
-    workerPool.onNumberOfWorkersUpdate(0, 0);
+    workerPool.onNumberOfWorkersUpdate(0, 0, 0);
     //now stop throwing exception to indicate connection is restored again
     workerProducer.setShutdownExceptionOnForward(false);
     //simulate connection being restored by first forwarding task again
     forwardTaskAsync(task, future);
     await().until(() -> dispatcher.getState() == State.WAIT_FOR_WORKER);
     //now simulate the worker being back
-    workerPool.onNumberOfWorkersUpdate(1, 0);
+    workerPool.onNumberOfWorkersUpdate(1, 0, 0);
     //should now be unlocked, but waiting for worker to be done
     await().until(() -> dispatcher.getState() == State.WAIT_FOR_WORKER);
     workerPool.onWorkerFinished(task.getId());

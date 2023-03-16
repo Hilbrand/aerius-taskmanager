@@ -93,7 +93,7 @@ class RabbitMQChannelQueueEventsWatcherTest {
     final WorkerSizeObserver observer = new WorkerSizeObserver() {
 
       @Override
-      public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages) {
+      public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, int numberOfMessagesUnacknowledged) {
         fail("Should not call onNumberOfWorkersUpdate in this class");
       }
 

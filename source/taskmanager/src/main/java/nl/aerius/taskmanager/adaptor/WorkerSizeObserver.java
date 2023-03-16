@@ -26,8 +26,9 @@ public interface WorkerSizeObserver {
    *
    * @param numberOfWorkers number of number of workers processes
    * @param numberOfMessages Actual total number of messages on the queue
+   * @param numberOfMessagesUnacknowledged Actual number of unacknowledged messages on the queue
    */
-  void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages);
+  void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, int numberOfMessagesUnacknowledged);
 
   /**
    * Gives an increment or decrement number of workers processes connected on the queue.

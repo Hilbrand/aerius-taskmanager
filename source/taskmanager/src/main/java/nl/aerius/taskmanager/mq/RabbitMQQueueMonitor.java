@@ -117,8 +117,9 @@ public class RabbitMQQueueMonitor {
         final JsonObject jsonObject = je.getAsJsonObject();
         final int numberOfWorkers = getJsonIntPrimitive(jsonObject, "consumers");
         final int numberOfMessages = getJsonIntPrimitive(jsonObject, "messages");
+        final int numberOfMessagesUnacknowledged = getJsonIntPrimitive(jsonObject, "messages_unacknowledged");
 
-        observer.onNumberOfWorkersUpdate(numberOfWorkers, numberOfMessages);
+        observer.onNumberOfWorkersUpdate(numberOfWorkers, numberOfMessages, numberOfMessagesUnacknowledged);
         LOG.trace("[{}] active workers:{}", queueName, numberOfWorkers);
       }
     } catch (final URISyntaxException | IOException e) {

@@ -46,7 +46,7 @@ class RabbitMQQueueMonitorTest {
     final AtomicInteger workerSize = new AtomicInteger();
     final WorkerSizeObserver mwps = new WorkerSizeObserver() {
       @Override
-      public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages) {
+      public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, int numberOfMessagesUnacknowledged) {
         workerSize.set(numberOfWorkers);
       }
 

@@ -49,6 +49,8 @@ class WorkerPool implements WorkerSizeObserver, WorkerFinishedHandler, WorkerMet
   private final WorkerProducer wp;
   private final WorkerUpdateHandler workerUpdateHandler;
 
+  private int numberOfMessagesUnacknowledged;
+
   public WorkerPool(final String workerQueueName, final WorkerProducer wp, final WorkerUpdateHandler workerUpdateHandler) {
     this.workerQueueName = workerQueueName;
     this.wp = wp;
@@ -94,7 +96,7 @@ class WorkerPool implements WorkerSizeObserver, WorkerFinishedHandler, WorkerMet
   @Override
   public int getRunningWorkerSize() {
     synchronized (this) {
-      return runningWorkers.size();
+      return Math.max(runningWorkers.size(), numberOfMessagesUnacknowledged);
     }
   }
 
@@ -183,8 +185,9 @@ class WorkerPool implements WorkerSizeObserver, WorkerFinishedHandler, WorkerMet
    * @param numberOfMessages Actual total number of messages on the queue
    */
   @Override
-  public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages) {
+  public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, final int numberOfMessagesUnacknowledged) {
     synchronized (this) {
+      this.numberOfMessagesUnacknowledged = numberOfMessagesUnacknowledged;
       updateNumberOfWorkers(numberOfWorkers);
       checkDeadTasks(numberOfMessages);
     }
