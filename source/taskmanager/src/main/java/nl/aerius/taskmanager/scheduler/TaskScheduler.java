@@ -74,7 +74,7 @@ public interface TaskScheduler<T extends TaskQueue> extends WorkerUpdateHandler 
      * @param workerQueueName the worker queue the scheduler is creatd for
      * @return new task scheduler
      */
-    TaskScheduler<T> createScheduler(String workerQueueName);
+    TaskScheduler<T> createScheduler(String workerQueueName, boolean dynamicQueues);
 
     /**
      * Returns the handler that persists the scheduler configurations.

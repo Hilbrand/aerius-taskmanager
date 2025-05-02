@@ -27,8 +27,20 @@ public class PriorityTaskSchedulerFactory implements TaskSchedulerFactory<Priori
   private final PriorityTaskSchedulerFileHandler handler = new PriorityTaskSchedulerFileHandler();
 
   @Override
-  public TaskScheduler<PriorityTaskQueue> createScheduler(final String workerQueueName) {
-    return new PriorityTaskScheduler(new PriorityQueueMap(), workerQueueName);
+  public TaskScheduler<PriorityTaskQueue> createScheduler(final String workerQueueName, final boolean dynamicQueues) {
+    final PriorityQueueMap map = dynamicQueues ? new PriorityQueueMap(this::dynamicQueueMapper) : new PriorityQueueMap();
+
+    return new PriorityTaskScheduler(map, workerQueueName);
+  }
+
+  private String dynamicQueueMapper(final String queueName) {
+    final int nrOfDots = (int) queueName.chars().filter(c -> c == '.').count();
+    if (nrOfDots == 2) {
+      return queueName;
+    } else {
+      System.out.println("> NAME:" + queueName.substring(0, queueName.lastIndexOf('.')));
+      return queueName.substring(0, queueName.lastIndexOf('.'));
+    }
   }
 
   @Override

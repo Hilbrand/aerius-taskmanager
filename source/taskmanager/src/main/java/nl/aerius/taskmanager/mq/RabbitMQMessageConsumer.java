@@ -18,6 +18,7 @@ package nl.aerius.taskmanager.mq;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,14 +57,15 @@ class RabbitMQMessageConsumer extends DefaultConsumer {
   }
 
   public void startConsuming() throws IOException {
-    LOG.debug("Starting consumer {}.", queueName);
+    LOG.debug("Starting consumer {}.", queueConfig);
     final Channel taskChannel = getChannel();
-    // ensure a durable channel exists
-    taskChannel.queueDeclare(queueName, queueConfig.durable(), false, false,
-        RabbitMQQueueUtil.queueDeclareArguments(queueConfig.durable(), queueConfig.queueType()));
-    //ensure only one message gets delivered at a time.
-    taskChannel.basicQos(1);
-
+    // If not a dynamic queue ensure the queue is created.
+    if (!queueConfig.dynamicQueues()) {
+      taskChannel.queueDeclare(queueName, queueConfig.durable(), false, false,
+          RabbitMQQueueUtil.queueDeclareArguments(queueConfig.durable(), queueConfig.queueType()));
+      //ensure only one message gets delivered at a time.
+      taskChannel.basicQos(1);
+    }
     taskChannel.basicConsume(queueName, false, queueName, this);
     LOG.debug("Consumer {} was started.", queueName);
   }
@@ -75,7 +77,7 @@ class RabbitMQMessageConsumer extends DefaultConsumer {
       if (getChannel().isOpen()) {
         getChannel().basicCancel(queueName);
       }
-    } catch (final AlreadyClosedException | IOException e) {
+    } catch (final AlreadyClosedException | IOException | TimeoutException e) {
       LOG.debug("Exception while stopping consuming, ignoring.", e);
     }
   }

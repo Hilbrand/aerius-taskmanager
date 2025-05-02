@@ -19,6 +19,9 @@ package nl.aerius.taskmanager.client;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.rabbitmq.client.AMQP.BasicProperties.Builder;
 import com.rabbitmq.client.Channel;
 
@@ -26,6 +29,8 @@ import com.rabbitmq.client.Channel;
  * Sends tasks to the queue, and opens a consumer to wait for a data being sent back. The data will be passed to the callback.
  */
 public class TaskManagerClientSenderWithCallback extends TaskManagerClientSender {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TaskManagerClientSenderWithCallback.class);
 
   private final TaskResultCallback callback;
   private final String replyQueueName;

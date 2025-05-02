@@ -64,6 +64,20 @@ public class WorkerQueueType {
     return taskName == null ? null : (NAMING_PREFIX + propertyName() + DOT + taskName);
   }
 
+  public String getTaskQueueName(final String taskName, final String id) {
+    return taskName == null ? null : (NAMING_PREFIX + propertyName() + DOT + taskName + DOT + id);
+  }
+
+  public static String[] getTaskQueueParts(final String queueName) {
+    if (queueName != null) {
+      final int lastIndexOf = queueName.lastIndexOf(DOT);
+      if (lastIndexOf > 0) {
+        return new String[] {queueName.substring(0, lastIndexOf), queueName.substring(lastIndexOf)};
+      }
+    }
+    return null;
+  }
+
   public String getWorkerQueueName() {
     return NAMING_PREFIX + "worker." + propertyName();
   }

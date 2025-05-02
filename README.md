@@ -38,7 +38,7 @@ The flow of a tasks is as follows:
 1. A client puts a task on the task type queue within the work group.
 The queue to put the job on depends on the type of task.
 For example a web interface calculation for Calculator is put on the queue `aerius.calculator.calculator_ui`.
-2. The taskmanagers listens to all client queues and takes a message from each queue if one is present.
+2. The taskmanager listens to all client queues and takes a message from each queue if one is present.
 3. When a worker starts listing to the worker queue it opens a RabbbitMQ channel for each process in the worker that can handle tasks.
 For example a queue is named `aerius.worker.calculator`. Where `.worker` indicates that it's a worker queue.
 4. The taskmanager counts the number of worker channels and to determine the available capacity.

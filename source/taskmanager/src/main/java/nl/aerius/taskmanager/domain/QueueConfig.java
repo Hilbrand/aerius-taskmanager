@@ -16,4 +16,4 @@
  */
 package nl.aerius.taskmanager.domain;
 
-public record QueueConfig(String queueName, boolean durable, RabbitMQQueueType queueType) {}
+public record QueueConfig(String queueName, boolean durable, boolean dynamicQueues, RabbitMQQueueType queueType) {}

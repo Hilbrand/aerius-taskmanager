@@ -82,7 +82,7 @@ class PriorityTaskSchedulerTest {
     configuration.getQueues().add(tc1);
     configuration.getQueues().add(tc2);
     configuration.getQueues().add(tc3);
-    scheduler = (PriorityTaskScheduler) factory.createScheduler(configuration.getWorkerQueueName());
+    scheduler = (PriorityTaskScheduler) factory.createScheduler(configuration.getWorkerQueueName(), false);
     configuration.getQueues().forEach(scheduler::updateQueue);
     task1 = createTask(taskConsumer1, "1", QUEUE1);
     task2a = createTask(taskConsumer2, "2a", QUEUE2);
@@ -278,7 +278,7 @@ class PriorityTaskSchedulerTest {
   }
 
   private TaskConsumer createMockTaskConsumer(final String taskQueueName) throws IOException {
-    return new TaskConsumerImpl(mock(ExecutorService.class), new QueueConfig(taskQueueName, false, null), mock(ForwardTaskHandler.class),
+    return new TaskConsumerImpl(mock(ExecutorService.class), new QueueConfig(taskQueueName, false, false, null), mock(ForwardTaskHandler.class),
         new MockAdaptorFactory()) {
       @Override
       public void messageDelivered(final MessageMetaData messageMetaData) {

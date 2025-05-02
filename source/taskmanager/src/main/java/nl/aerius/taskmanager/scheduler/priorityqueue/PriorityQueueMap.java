@@ -22,12 +22,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import nl.aerius.taskmanager.domain.PriorityTaskQueue;
 
 /**
  * Map to keep track of queue configurations and number of tasks running on workers.
  */
 class PriorityQueueMap {
+  private static final Logger LOG = LoggerFactory.getLogger(PriorityQueueMap.class);
+
   /**
    * Map to keep track of queue configuration per queue.
    */
@@ -38,23 +43,30 @@ class PriorityQueueMap {
   private final Map<String, AtomicInteger> tasksOnWorkersPerQueue = new ConcurrentHashMap<>();
   private final Function<String, String> keyMapper;
 
+  private boolean custom;
+
   public PriorityQueueMap() {
     this(Function.identity());
+    custom = false;
   }
 
   public PriorityQueueMap(final Function<String, String> keyMapper) {
     this.keyMapper = keyMapper;
+    custom = true;
   }
 
   public PriorityTaskQueue get(final String queueName) {
+    info("GET:{}", queueName);
     return taskQueueConfigurations.get(key(queueName));
   }
 
   public boolean containsKey(final String queueName) {
+    info("CONTAINS KEY:{}", queueName);
     return taskQueueConfigurations.containsKey(key(queueName));
   }
 
   public PriorityTaskQueue put(final String queueName, final PriorityTaskQueue queue) {
+    info("PUT:{}", queueName);
     final String keyQueueName = key(queueName);
 
     tasksOnWorkersPerQueue.computeIfAbsent(keyQueueName, k -> new AtomicInteger());
@@ -62,22 +74,32 @@ class PriorityQueueMap {
   }
 
   public void decrementOnWorker(final String queueName) {
+    info("DECREMENT ON WORKER:{}", queueName);
     tasksOnWorkersPerQueue.get(key(queueName)).decrementAndGet();
   }
 
   public void incrementOnWorker(final String queueName) {
+    info("INCREMENT ON WORKER:{}", queueName);
     tasksOnWorkersPerQueue.get(key(queueName)).incrementAndGet();
   }
 
   public int onWorker(final String queueName) {
+    info("ON WORKER:{}", queueName);
     return Optional.ofNullable(tasksOnWorkersPerQueue.get(key(queueName))).map(AtomicInteger::intValue).orElse(0);
   }
 
   public void remove(final String queueName) {
+    info("REMOVE:{}", queueName);
     final String keyQueueName = key(queueName);
 
     taskQueueConfigurations.remove(keyQueueName);
     tasksOnWorkersPerQueue.remove(keyQueueName);
+  }
+
+  private void info(final String string, final String value) {
+    if (custom) {
+      LOG.info(string, value);
+    }
   }
 
   private String key(final String queueName) {

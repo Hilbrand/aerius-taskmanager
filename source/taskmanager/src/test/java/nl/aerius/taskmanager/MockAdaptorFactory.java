@@ -16,11 +16,14 @@
  */
 package nl.aerius.taskmanager;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
 
 import org.mockito.Mockito;
 
 import nl.aerius.taskmanager.adaptor.AdaptorFactory;
+import nl.aerius.taskmanager.adaptor.DynamicQueueConsumer;
 import nl.aerius.taskmanager.adaptor.TaskMessageHandler;
 import nl.aerius.taskmanager.adaptor.WorkerProducer;
 import nl.aerius.taskmanager.adaptor.WorkerSizeProviderProxy;
@@ -33,6 +36,7 @@ public class MockAdaptorFactory implements AdaptorFactory {
 
   private final MockWorkerProducer mockWorkerProducer = new MockWorkerProducer();
   private final MockTaskMessageHandler mockTaskMessageHandler = new MockTaskMessageHandler();
+  private final DynamicQueueConsumer mockDynamicQueueConsumer = mock(DynamicQueueConsumer.class);
 
   @Override
   public WorkerSizeProviderProxy createWorkerSizeProvider() {
@@ -51,5 +55,10 @@ public class MockAdaptorFactory implements AdaptorFactory {
 
   public MockTaskMessageHandler getMockTaskMessageHandler() {
     return mockTaskMessageHandler;
+  }
+
+  @Override
+  public DynamicQueueConsumer createDynamicQueueConsumer() throws IOException {
+    return mockDynamicQueueConsumer;
   }
 }

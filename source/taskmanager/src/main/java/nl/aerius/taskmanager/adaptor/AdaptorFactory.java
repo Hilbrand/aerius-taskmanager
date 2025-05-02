@@ -45,4 +45,11 @@ public interface AdaptorFactory {
    * @throws IOException error in case or connection problems
    */
   TaskMessageHandler createTaskMessageHandler(QueueConfig queueConfig) throws IOException;
+
+  /**
+   *
+   * @return
+   * @throws IOException
+   */
+  DynamicQueueConsumer createDynamicQueueConsumer() throws IOException;
 }

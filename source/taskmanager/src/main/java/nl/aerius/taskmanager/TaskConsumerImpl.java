@@ -89,6 +89,7 @@ public class TaskConsumerImpl implements TaskConsumer {
 
   @Override
   public void handleShutdownSignal() {
+    LOG.error("TaskConsumer handleShutdownSignal");
     forwardTaskHandler.killTasks();
     start();
   }

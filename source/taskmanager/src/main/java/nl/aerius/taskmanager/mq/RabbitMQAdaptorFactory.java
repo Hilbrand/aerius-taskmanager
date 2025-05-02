@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.concurrent.ScheduledExecutorService;
 
 import nl.aerius.taskmanager.adaptor.AdaptorFactory;
+import nl.aerius.taskmanager.adaptor.DynamicQueueConsumer;
 import nl.aerius.taskmanager.adaptor.TaskMessageHandler;
 import nl.aerius.taskmanager.adaptor.WorkerProducer;
 import nl.aerius.taskmanager.adaptor.WorkerSizeProviderProxy;
@@ -58,5 +59,10 @@ public class RabbitMQAdaptorFactory implements AdaptorFactory {
   @Override
   public WorkerProducer createWorkerProducer(final QueueConfig queueConfig) {
     return new RabbitMQWorkerProducer(factory, queueConfig);
+  }
+
+  @Override
+  public DynamicQueueConsumer createDynamicQueueConsumer() throws IOException {
+    return new RabbitMQDynamicQueueConsumer(factory.getConnection().createChannel());
   }
 }

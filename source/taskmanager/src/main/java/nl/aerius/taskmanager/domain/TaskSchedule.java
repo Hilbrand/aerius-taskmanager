@@ -30,6 +30,8 @@ public class TaskSchedule<T extends TaskQueue> {
 
   private Boolean durable;
 
+  private Boolean dynamicQueues;
+
   private RabbitMQQueueType queueType;
 
   private List<T> queues = new ArrayList<>();
@@ -55,7 +57,17 @@ public class TaskSchedule<T extends TaskQueue> {
   }
 
   public boolean isDurable() {
+    // If not set it is durable. This is for backward compatibility reasons.
     return !Boolean.FALSE.equals(durable);
+  }
+
+  public void setDynamicQueues(final Boolean dynamicQueues) {
+    this.dynamicQueues = dynamicQueues;
+  }
+
+  public boolean isDynamicQueues() {
+    // If not set it is not dynamic, therefore should be explicitly true.
+    return Boolean.TRUE.equals(dynamicQueues);
   }
 
   public RabbitMQQueueType getQueueType() {

@@ -19,6 +19,10 @@ package nl.aerius.taskmanager.client;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.ConnectException;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -46,6 +50,7 @@ public class TaskManagerClientSender implements AutoCloseable {
   private final BrokerConnectionFactory factory;
   private boolean running = true;
   private final AtomicReference<Channel> channel = new AtomicReference<>();
+  private final Set<String> registeredQueues = new HashSet<>();
 
   /**
    * Creates a {@link TaskManagerClientSender}.
@@ -58,6 +63,45 @@ public class TaskManagerClientSender implements AutoCloseable {
     }
     this.factory = factory;
     factory.registerClient(this);
+  }
+
+  /**
+   *
+   * @param newQueueName
+   * @throws IOException
+   */
+  public void registerNewQueue(final String newQueueName) throws IOException {
+    if (registeredQueues.contains(newQueueName)) {
+      return;
+    }
+    boolean done = false;
+    while (running && !done) {
+      try {
+        // Create a channel to send the message over.
+        ensureChannel(channel);
+        final Channel chn = channel.get();
+        if (chn != null) {
+          chn.queueDeclare(newQueueName, false, false, false, Map.of("x-expires", TimeUnit.SECONDS.toMillis(5)));
+          //ensure only one message gets delivered at a time.
+          chn.basicQos(1);
+          chn.basicPublish("", QueueConstants.TASKMANAGER_NEW_DYNAMIC_QUEUE, null, QueueHelper.objectToBytes(newQueueName));
+          registeredQueues.add(newQueueName);
+        }
+        // task has been send successfully, return.
+        done = true;
+      } catch (final ConnectException e) {
+        // don't catch all IOExceptions, just ConnectExceptions.
+        // exceptions like wrong host-name should cause a bigger disturbance.
+        // those indicate that connection has temporarily been lost with RabbitMQ, though could be not that temporarily...
+        LOG.error("Error trying to inform the taskmanager a new dynamic queue ((}) is available", newQueueName, e);
+        try {
+          Thread.sleep(CLIENT_START_RETRY_PERIOD);
+        } catch (final InterruptedException e1) {
+          // no need to log.
+          Thread.currentThread().interrupt();
+        }
+      }
+    }
   }
 
   /**

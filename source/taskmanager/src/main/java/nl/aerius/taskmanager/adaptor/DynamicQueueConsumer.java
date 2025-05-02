@@ -14,24 +14,20 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
-package nl.aerius.taskmanager.client;
+package nl.aerius.taskmanager.adaptor;
 
-/**
- * Constants for queue.
- */
-public final class QueueConstants {
+import java.io.IOException;
 
-  /**
-   * Reply key passed with message on queue containing the taskmanager queue to reply to to inform the taskmanager the task finished.
-   */
-  public static final String TASKMANAGER_REPLY_QUEUE = "replyCC";
+public interface DynamicQueueConsumer {
 
-  /**
-   *
-   */
-  public static final String TASKMANAGER_NEW_DYNAMIC_QUEUE = "aerius.taskmanager.inform";
-
-  private QueueConstants() {
-    // util class.
+  interface DynamicQueueAddedCallback {
+    void onDynamicQueueAdded(String queueName);
   }
+
+  void addDynamicQueueAddedCallback(DynamicQueueAddedCallback callback);
+
+  void startConsuming() throws IOException;
+
+  void stopConsuming();
+
 }

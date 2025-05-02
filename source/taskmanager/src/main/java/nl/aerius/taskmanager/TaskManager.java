@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -32,6 +33,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import nl.aerius.taskmanager.adaptor.AdaptorFactory;
+import nl.aerius.taskmanager.adaptor.DynamicQueueConsumer;
+import nl.aerius.taskmanager.adaptor.DynamicQueueConsumer.DynamicQueueAddedCallback;
 import nl.aerius.taskmanager.adaptor.WorkerProducer;
 import nl.aerius.taskmanager.adaptor.WorkerSizeProviderProxy;
 import nl.aerius.taskmanager.domain.QueueConfig;
@@ -54,13 +57,16 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
   private final TaskSchedulerFactory<T, S> schedulerFactory;
   private final WorkerSizeProviderProxy workerSizeObserverProxy;
   private final Map<String, TaskScheduleBucket> buckets = new HashMap<>();
+  private final DynamicQueueConsumer dynamicQueueConsumer;
 
   public TaskManager(final ExecutorService executorService, final AdaptorFactory factory, final TaskSchedulerFactory<T, S> schedulerFactory,
-      final WorkerSizeProviderProxy workerSizeObserverProxy) {
+      final WorkerSizeProviderProxy workerSizeObserverProxy) throws IOException {
     this.executorService = executorService;
     this.factory = factory;
     this.schedulerFactory = schedulerFactory;
     this.workerSizeObserverProxy = workerSizeObserverProxy;
+    this.dynamicQueueConsumer = factory.createDynamicQueueConsumer();
+    this.dynamicQueueConsumer.startConsuming();
   }
 
   /**
@@ -72,13 +78,21 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
   public boolean updateTaskScheduler(final TaskSchedule<T> schedule) throws InterruptedException {
     // Set up scheduler with worker pool
     final String workerQueueName = schedule.getWorkerQueueName();
+
     if (!buckets.containsKey(workerQueueName)) {
-      LOG.info("Added scheduler for worker queue {}", workerQueueName);
-      buckets.put(workerQueueName, new TaskScheduleBucket(new QueueConfig(workerQueueName, schedule.isDurable(), schedule.getQueueType())));
+      final QueueConfig queueConfig = new QueueConfig(workerQueueName, schedule.isDurable(), schedule.isDynamicQueues(), schedule.getQueueType());
+
+      LOG.info("Added scheduler for worker queue {}", queueConfig);
+      final TaskScheduleBucket bucket = new TaskScheduleBucket(queueConfig);
+
+      if (schedule.isDynamicQueues()) {
+        dynamicQueueConsumer.addDynamicQueueAddedCallback(bucket);
+      }
+      buckets.put(workerQueueName, bucket);
     }
     final TaskScheduleBucket taskScheduleBucket = buckets.get(workerQueueName);
 
-    taskScheduleBucket.updateQueues(schedule.getQueues(), schedule.isDurable(), schedule.getQueueType());
+    taskScheduleBucket.updateQueues(schedule.getQueues(), schedule.isDurable(), schedule.isDynamicQueues(), schedule.getQueueType());
     return taskScheduleBucket.isRunning();
   }
 
@@ -103,9 +117,10 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
   public void shutdown() {
     buckets.forEach((k, v) -> v.shutdown());
     buckets.clear();
+    dynamicQueueConsumer.stopConsuming();
   }
 
-  private class TaskScheduleBucket {
+  private class TaskScheduleBucket implements DynamicQueueAddedCallback {
     private final TaskDispatcher dispatcher;
     private final WorkerProducer workerProducer;
     private final Map<String, TaskConsumer> taskConsumers = new HashMap<>();
@@ -114,7 +129,7 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
 
     public TaskScheduleBucket(final QueueConfig queueConfig) throws InterruptedException {
       this.workerQueueName = queueConfig.queueName();
-      taskScheduler = schedulerFactory.createScheduler(workerQueueName);
+      taskScheduler = schedulerFactory.createScheduler(workerQueueName, queueConfig.dynamicQueues());
       LOG.info("Worker Queue Name:{} (durable:{}, queueType:{})", workerQueueName, queueConfig.durable(), queueConfig.queueType());
       workerProducer = factory.createWorkerProducer(queueConfig);
       final WorkerPool workerPool = new WorkerPool(workerQueueName, workerProducer, taskScheduler);
@@ -137,19 +152,33 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
       return dispatcher.isRunning();
     }
 
-    private void updateQueues(final List<T> newTaskQueues, final boolean durable, final RabbitMQQueueType rabbitMQQueueType) {
-      final Map<String, ? extends TaskQueue> newTaskQueuesMap = newTaskQueues.stream().filter(Objects::nonNull)
-          .collect(Collectors.toMap(TaskQueue::getQueueName, Function.identity()));
-      // Remove queues that are not in the new list
-      final List<Entry<String, TaskConsumer>> removedQueues = taskConsumers.entrySet().stream().filter(e -> !newTaskQueuesMap.containsKey(e.getKey()))
-          .toList();
-      removedQueues.forEach(e -> removeTaskConsumer(e.getKey()));
-      // Add and Update existing queues
-      newTaskQueues.stream().filter(Objects::nonNull).forEach(tc -> addOrUpdateTaskQueue(tc, durable, rabbitMQQueueType));
+    @Override
+    public void onDynamicQueueAdded(final String queueName) {
+      // TODO HSB: filter out queue specific naming
+      addTaskConsumerIfAbsent(new QueueConfig(queueName, false, true, RabbitMQQueueType.CLASSIC));
     }
 
-    private void addOrUpdateTaskQueue(final T taskQueueConfiguration, final boolean durable, final RabbitMQQueueType rabbitMQQueueType) {
-      addTaskConsumerIfAbsent(new QueueConfig(taskQueueConfiguration.getQueueName(), durable, rabbitMQQueueType));
+    private void updateQueues(final List<T> newTaskQueues, final boolean durable, final boolean dynamicQueues,
+        final RabbitMQQueueType rabbitMQQueueType) {
+      final Map<String, ? extends TaskQueue> newTaskQueuesMap = newTaskQueues.stream().filter(Objects::nonNull)
+          .collect(Collectors.toMap(TaskQueue::getQueueName, Function.identity()));
+
+      if (!dynamicQueues) {
+        // Remove queues that are not in the new list
+        final List<Entry<String, TaskConsumer>> removedQueues = taskConsumers.entrySet().stream()
+            .filter(e -> !newTaskQueuesMap.containsKey(e.getKey()))
+            .toList();
+        removedQueues.forEach(e -> removeTaskConsumer(e.getKey()));
+        // Add and Update existing queues
+      }
+      newTaskQueues.stream().filter(Objects::nonNull).forEach(tc -> addOrUpdateTaskQueue(tc, durable, dynamicQueues, rabbitMQQueueType));
+    }
+
+    private void addOrUpdateTaskQueue(final T taskQueueConfiguration, final boolean durable, final boolean dynamicQueues,
+        final RabbitMQQueueType rabbitMQQueueType) {
+      if (!dynamicQueues) {
+        addTaskConsumerIfAbsent(new QueueConfig(taskQueueConfiguration.getQueueName(), durable, dynamicQueues, rabbitMQQueueType));
+      }
       taskScheduler.updateQueue(taskQueueConfiguration);
     }
 
@@ -179,7 +208,7 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
     private void removeTaskConsumer(final String taskQueueName) {
       LOG.info("Removed task queue {}", taskQueueName);
       taskScheduler.removeQueue(taskQueueName);
-      taskConsumers.remove(taskQueueName).shutdown();
+      Optional.ofNullable(taskConsumers.remove(taskQueueName)).ifPresent(tc -> tc.shutdown());
     }
 
     public void shutdown() {

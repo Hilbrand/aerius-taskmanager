@@ -61,7 +61,7 @@ class TaskDispatcherTest {
     workerPool = new WorkerPool(WORKER_QUEUE_NAME_TEST, workerProducer, scheduler);
     dispatcher = new TaskDispatcher(WORKER_QUEUE_NAME_TEST, scheduler, workerPool);
     factory = new MockAdaptorFactory();
-    taskConsumer = new TaskConsumerImpl(executor, new QueueConfig("testqueue", false, null), dispatcher, factory);
+    taskConsumer = new TaskConsumerImpl(executor, new QueueConfig("testqueue", false, false, null), dispatcher, factory);
   }
 
   @AfterEach
