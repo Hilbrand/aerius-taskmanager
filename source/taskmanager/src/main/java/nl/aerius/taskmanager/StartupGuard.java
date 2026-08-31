@@ -17,17 +17,18 @@
 package nl.aerius.taskmanager;
 
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.locks.ReentrantLock;
 
 import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
 
 /**
- * Class to be used at startup. The Scheduler should not start before it is known how many messages are still on the queue.
- * This to register any work that is still on the queue and to properly calculate load metrics.
- * Because the Task Manager is not aware of the tasks already on the queue and therefore otherwise these messages won't be counted in the metrics.
- * This can result in the metrics being skewed, and thereby negatively reporting load metrics.
+ * Class to be used at startup. The Scheduler should not start before the number of messages on the queue is zero.
+ * Because the Task Manager has no information of the tasks already on the queue and therefore there is no tracking information of those messages.
+ * As all tracking information only lives in memory and is reset when the Task Manager is restarted.
  */
 public class StartupGuard implements WorkerSizeObserver {
 
+  private final ReentrantLock lock = new ReentrantLock();
   private final Semaphore openSemaphore = new Semaphore(0);
 
   private boolean open;
@@ -48,11 +49,14 @@ public class StartupGuard implements WorkerSizeObserver {
 
   @Override
   public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, final int numberOfMessagesInProgress) {
-    synchronized (openSemaphore) {
+    lock.lock();
+    try {
       if (!open) {
         open = true;
         openSemaphore.release();
       }
+    } finally {
+      lock.unlock();
     }
   }
 }

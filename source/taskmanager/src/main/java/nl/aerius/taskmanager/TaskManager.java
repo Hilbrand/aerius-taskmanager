@@ -174,8 +174,6 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
         workerSizeObserverProxy.addObserver(workerQueueName, wzo);
       }
       workerProducer.start();
-      // Set up metrics
-      WorkerPoolMetrics.setupMetrics(workerPool, workerQueueName);
 
       dispatcher = new TaskDispatcher(workerQueueName, taskScheduler, workerPool);
       executorService.execute(() -> {
@@ -234,7 +232,6 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
       });
     }
 
-
     /**
      * Removes a task consumer with the given queue name.
      *
@@ -250,7 +247,6 @@ class TaskManager<T extends TaskQueue, S extends TaskSchedule<T>> {
       dispatcher.shutdown();
       workerProducer.shutdown();
       taskManagerMetrics.remove(workerQueueName);
-      WorkerPoolMetrics.removeMetrics(workerQueueName);
       taskConsumers.forEach((k, v) -> v.shutdown());
     }
 

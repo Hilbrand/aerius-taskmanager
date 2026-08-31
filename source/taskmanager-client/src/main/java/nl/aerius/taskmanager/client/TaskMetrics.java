@@ -61,7 +61,8 @@ public class TaskMetrics {
   }
 
   public static String stringValue(final Map<String, Object> messageMetaData, final String key) {
-    return Optional.ofNullable(messageMetaData.get(key))
+    return Optional.ofNullable(messageMetaData)
+        .map(m -> m.get(key))
         .filter(LongString.class::isInstance)
         .map(t -> new String(((LongString) t).getBytes()))
         .orElse("");
