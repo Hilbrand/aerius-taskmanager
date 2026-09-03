@@ -50,6 +50,7 @@ class LoadMetric {
   private int numberOfWorkers;
   private final ToDoubleBiFunction<Integer, Integer> countFunction;
   private final ToDoubleBiFunction<Double, Long> sumFunction;
+  private final Object lock = new Object();
 
   public LoadMetric(final ToDoubleBiFunction<Integer, Integer> countFunction, final ToDoubleBiFunction<Double, Long> sumFunction) {
     this.countFunction = countFunction;
@@ -62,23 +63,22 @@ class LoadMetric {
    * @param deltaUsedWorkers number of jobs on the workers being added or subtracted.
    * @param numberOfWorkers Number of available workers
    */
-  public synchronized void register(final int deltaUsedWorkers, final int numberOfWorkers) {
-    this.numberOfWorkers = numberOfWorkers;
-    final long newLast = System.currentTimeMillis();
-    final long delta = newLast - last;
-
-    total += delta * countFunction.applyAsDouble(numberOfWorkers, usedWorkers);
-    totalMeasureTime += delta;
-    last = newLast;
-    usedWorkers = Math.max(0, usedWorkers + deltaUsedWorkers);
+  public  void register(final int deltaUsedWorkers, final int numberOfWorkers) {
+    synchronized (lock) {
+      if (deltaUsedWorkers != 0 || this.numberOfWorkers != numberOfWorkers) {
+        updateState(deltaUsedWorkers, numberOfWorkers);
+      }
+    }
   }
+
 
   /**
    * Resets the metric state. Sets running workers to 0, and resets the average load time by calling process.
    */
-  public synchronized void reset() {
-    usedWorkers = 0;
-    process();
+  public void reset() {
+    synchronized(lock) {
+      updateState(-usedWorkers, numberOfWorkers);
+    }
   }
 
   /**
@@ -86,13 +86,27 @@ class LoadMetric {
    *
    * @return Average load of the workers since the last time this method was called
    */
-  public synchronized double process() {
-    // Call register here to set the end time this moment. This will calculate workers running up till now as being active.
-    register(0, numberOfWorkers);
-    final double averageTotal = totalMeasureTime > 0 ? sumFunction.applyAsDouble(total, totalMeasureTime) : 0;
+  public double process() {
+    synchronized(lock) {
+      // Call register here to set the end time this moment. This will calculate workers running up till now as being active.
+      updateState(0, numberOfWorkers);
+      final double averageTotal = totalMeasureTime > 0 ? sumFunction.applyAsDouble(total, totalMeasureTime) : 0;
 
-    totalMeasureTime = 0;
-    total = 0;
-    return averageTotal;
+      totalMeasureTime = 0;
+      total = 0;
+      return averageTotal;
+    }
+  }
+
+  private void updateState(final int deltaUsedWorkers, final int updatedNumberOfWorkers) {
+    final long newLast = System.currentTimeMillis();
+    final long delta = newLast - last;
+
+    // First calculate the total for passed time period with the worker values up to this time.
+    total += delta * countFunction.applyAsDouble(numberOfWorkers, usedWorkers);
+    totalMeasureTime += delta;
+    last = newLast;
+    numberOfWorkers = updatedNumberOfWorkers;
+    usedWorkers = Math.max(0, usedWorkers + deltaUsedWorkers);
   }
 }
