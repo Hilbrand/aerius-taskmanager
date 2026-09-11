@@ -63,7 +63,7 @@ class LoadMetric {
    * @param deltaUsedWorkers number of jobs on the workers being added or subtracted.
    * @param numberOfWorkers Number of available workers
    */
-  public  void register(final int deltaUsedWorkers, final int numberOfWorkers) {
+  public void register(final int deltaUsedWorkers, final int numberOfWorkers) {
     synchronized (lock) {
       if (deltaUsedWorkers != 0 || this.numberOfWorkers != numberOfWorkers) {
         updateState(deltaUsedWorkers, numberOfWorkers);
@@ -77,7 +77,8 @@ class LoadMetric {
    */
   public void reset() {
     synchronized(lock) {
-      updateState(-usedWorkers, numberOfWorkers);
+      usedWorkers = 0;
+      process();
     }
   }
 

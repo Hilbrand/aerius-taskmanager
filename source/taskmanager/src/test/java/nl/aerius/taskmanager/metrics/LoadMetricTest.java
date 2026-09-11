@@ -88,9 +88,9 @@ class LoadMetricTest {
     assertEquals(5, countUsedWorkersCaptor.getValue(), "Should get the number of used workers of the first call");
     loadMetric.reset();
     verify(countFunction, times(3)).applyAsDouble(any(), countUsedWorkersCaptor.capture());
-    assertEquals(11, countUsedWorkersCaptor.getValue(), "reset should set the number of used workers of the last register call");
+    assertEquals(0, countUsedWorkersCaptor.getValue(), "Reset has set used number to 0, so that is at is expected here.");
     loadMetric.register(8, 10);
     verify(countFunction, times(4)).applyAsDouble(any(), countUsedWorkersCaptor.capture());
-    assertEquals(0, countUsedWorkersCaptor.getValue(), "reset should set used workers to 0");
+    assertEquals(0, countUsedWorkersCaptor.getValue(), "This call should get prevoious value of 0 used workers");
   }
 }
