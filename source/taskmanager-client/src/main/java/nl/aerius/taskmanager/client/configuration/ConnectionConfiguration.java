@@ -43,7 +43,7 @@ public final class ConnectionConfiguration {
   /**
    * Default refresh time in seconds.
    */
-  private static final int DEFAULT_MANAGEMENT_REFRESH_RATE = 60; //seconds
+  private static final int DEFAULT_MANAGEMENT_REFRESH_RATE = 10; //seconds
 
   /**
    * Default wait time before retrying to connect.

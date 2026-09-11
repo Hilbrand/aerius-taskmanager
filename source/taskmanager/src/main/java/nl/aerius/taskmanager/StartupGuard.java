@@ -20,6 +20,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.ReentrantLock;
 
 import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 /**
  * Class to be used at startup. The Scheduler should not start before the number of messages on the queue is zero.
@@ -48,7 +49,7 @@ public class StartupGuard implements WorkerSizeObserver {
   }
 
   @Override
-  public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, final int numberOfMessagesInProgress) {
+  public void onNumberOfWorkersUpdate(final RabbitMQQueueStatus queueStatus) {
     lock.lock();
     try {
       if (!open) {

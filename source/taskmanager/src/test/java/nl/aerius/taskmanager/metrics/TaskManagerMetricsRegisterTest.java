@@ -33,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import nl.aerius.taskmanager.StartupGuard;
 import nl.aerius.taskmanager.client.TaskMetrics;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 /**
  * Test class for {@link TaskManagerMetricsRegister}.
@@ -93,8 +94,10 @@ public class TaskManagerMetricsRegisterTest {
   }
 
   private void startUp(final int numberOfWorkers, final int numberOfMessages) {
-    register.onNumberOfWorkersUpdate(numberOfWorkers, numberOfMessages, 0);
-    startupGuard.onNumberOfWorkersUpdate(numberOfWorkers, numberOfMessages, 0);
+    final RabbitMQQueueStatus status = new RabbitMQQueueStatus(numberOfWorkers, numberOfMessages, 0);
+
+    register.onNumberOfWorkersUpdate(status);
+    startupGuard.onNumberOfWorkersUpdate(status);
   }
 
   private Map<String, Object> createMap(final String queueName, final long duration) {

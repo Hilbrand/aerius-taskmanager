@@ -40,6 +40,7 @@ import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
 import nl.aerius.taskmanager.adaptor.WorkerSizeProviderProxy;
 import nl.aerius.taskmanager.domain.PriorityTaskQueue;
 import nl.aerius.taskmanager.domain.PriorityTaskSchedule;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 import nl.aerius.taskmanager.domain.RabbitMQQueueType;
 import nl.aerius.taskmanager.scheduler.priorityqueue.PriorityTaskSchedulerFileHandler;
 
@@ -66,7 +67,7 @@ class TaskManagerTest {
 
     doAnswer(a -> {
       // This will unblock the startup guard
-      ((WorkerSizeObserver) a.getArgument(1)).onNumberOfWorkersUpdate(0, 0, 0);
+      ((WorkerSizeObserver) a.getArgument(1)).onNumberOfWorkersUpdate(new RabbitMQQueueStatus(0, 0, 0));
       return null;
     }).when(workerSizeProvider).addObserver(any(), any());
     taskManager = new TaskManager<>(executor, scheduledExecutorService, factory, schedulerFactory, workerSizeProvider);

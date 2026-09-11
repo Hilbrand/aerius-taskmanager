@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import nl.aerius.taskmanager.domain.QueueWatchDogListener;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 /**
  * Test class for {@link QueueWatchDog}.
@@ -55,16 +56,16 @@ class QueueWatchDogTest {
     IntStream.range(0, runningWorkers).forEach(i -> qwd.onWorkDispatched(String.valueOf(i), null));
     IntStream.range(0, finishedWorkers).forEach(i -> qwd.onWorkerFinished(String.valueOf(i), null));
 
-    qwd.onNumberOfWorkersUpdate(0, numberOfMessages, 0);
+    qwd.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(0, numberOfMessages, 0));
     // reset should never trigger the first time the problem was reported.
     verify(listener, never()).reset();
 
     // Fast forward 20 minutes to trigger reset if there is a problem.
     now.set(now.get().plusMinutes(20));
-    qwd.onNumberOfWorkersUpdate(0, numberOfMessages, 0);
+    qwd.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(0, numberOfMessages, 0));
     verify(listener, times(expected)).reset();
     // Call update again. This should not trigger reset again because we just called reset.
-    qwd.onNumberOfWorkersUpdate(0, numberOfMessages, 0);
+    qwd.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(0, numberOfMessages, 0));
     verify(listener, times(expected)).reset();
   }
 

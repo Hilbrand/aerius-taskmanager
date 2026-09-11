@@ -36,6 +36,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import nl.aerius.taskmanager.domain.ForwardTaskHandler;
 import nl.aerius.taskmanager.domain.Message;
 import nl.aerius.taskmanager.domain.QueueConfig;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 import nl.aerius.taskmanager.domain.Task;
 import nl.aerius.taskmanager.domain.TaskConsumer;
 import nl.aerius.taskmanager.domain.WorkerUpdateHandler;
@@ -77,7 +78,7 @@ class WorkerPoolTest {
   @Test
   void testWorkerPoolSizing() throws IOException {
     assertEquals(0, workerPool.getReportedWorkerSize(), "Check if workerPool size is empty at start");
-    workerPool.onNumberOfWorkersUpdate(10, 0, 0);
+    workerPool.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(10, 0, 0));
     assertEquals(10, workerPool.getReportedWorkerSize(), "Check if workerPool size is changed after sizing");
     assertEquals(10, numberOfWorkers, "Check if workerPool change handler called.");
     workerPool.reserveWorker();
@@ -90,10 +91,10 @@ class WorkerPoolTest {
 
   @Test
   void testWorkerPoolSizingWithInitialSize() throws IOException {
-    workerPool.onNumberOfWorkersUpdate(10, 5, 0);
+    workerPool.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(10, 5, 0));
     assertEquals(5, workerPool.getNumberOfUsedWorkers(), "Check if workerPool size is 5");
     assertEquals(10, workerPool.getNumberOfWorkers(), "Internal worker size should match reported number of workers");
-    workerPool.onNumberOfWorkersUpdate(10, 5, 0);
+    workerPool.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(10, 5, 0));
     assertEquals(5, workerPool.getNumberOfUsedWorkers(), "Check if workerPool size is still 5");
     assertEquals(10, workerPool.getNumberOfWorkers(), "Internal worker size should still match reported number of workers");
     IntStream.range(1, 6).forEach(a -> workerPool.onWorkerFinished("", null));
@@ -109,12 +110,12 @@ class WorkerPoolTest {
 
   @Test
   void testWorkerPoolScaleDown() throws IOException {
-    workerPool.onNumberOfWorkersUpdate(5, 0, 0);
+    workerPool.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(5, 0, 0));
     final Task task1 = createAndSendTaskToWorker();
     final Task task2 = createAndSendTaskToWorker();
     final Task task3 = createAndSendTaskToWorker();
     assertEquals(5, workerPool.getReportedWorkerSize(), "Check if workerPool size is same after 2 workers running");
-    workerPool.onNumberOfWorkersUpdate(1, 0, 0);
+    workerPool.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(1, 0, 0));
     assertEquals(3, workerPool.getNumberOfWorkers(),
         "Workpool size should match number of running tasks, since new total is lower than currently running");
     assertEquals(1, workerPool.getReportedWorkerSize(), "Check if current workerPool size is same after decreasing # workers");
@@ -128,7 +129,7 @@ class WorkerPoolTest {
 
   @Test
   void testReleaseTaskTwice() throws IOException {
-    workerPool.onNumberOfWorkersUpdate(2, 0, 0);
+    workerPool.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(2, 0, 0));
     final Task task1 = createAndSendTaskToWorker();
     final String id = task1.getId();
     workerPool.releaseWorker(id);
@@ -141,14 +142,14 @@ class WorkerPoolTest {
 
   @Test
   void testMessageDeliverd() throws IOException {
-    workerPool.onNumberOfWorkersUpdate(1, 0, 0);
+    workerPool.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(1, 0, 0));
     createAndSendTaskToWorker();
     assertNotSame(0, message.getDeliveryTag(), "Check if message is delivered");
   }
 
   @Test
   void testReset() throws IOException {
-    workerPool.onNumberOfWorkersUpdate(5, 0, 0);
+    workerPool.onNumberOfWorkersUpdate(new RabbitMQQueueStatus(5, 0, 0));
     createAndSendTaskToWorker();
     createAndSendTaskToWorker();
     assertEquals(2, workerPool.getNumberOfUsedWorkers(), "Should report 2 workers running.");

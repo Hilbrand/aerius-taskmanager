@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import nl.aerius.taskmanager.adaptor.WorkerProducer.WorkerProducerHandler;
 import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
 import nl.aerius.taskmanager.domain.QueueWatchDogListener;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 /**
  * WatchDog to detect dead messages. Dead messages are messages once put on the queue, but those messages have gone. For example because
@@ -73,9 +74,9 @@ class QueueWatchDog implements WorkerSizeObserver, WorkerProducerHandler {
   }
 
   @Override
-  public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, final int numberOfMessagesInProgress) {
+  public void onNumberOfWorkersUpdate(final RabbitMQQueueStatus queueStatus) {
     synchronized (runningTasks) {
-      if (isItDead(!runningTasks.isEmpty(), numberOfMessages)) {
+      if (isItDead(!runningTasks.isEmpty(), queueStatus.messages())) {
         LOG.info("It looks like some tasks are zombies on {} worker queue. All tasks in state running are released (running:{}).", workerQueueName,
             runningTasks.size());
         runningTasks.clear();

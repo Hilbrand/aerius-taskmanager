@@ -27,6 +27,7 @@ import nl.aerius.taskmanager.StartupGuard;
 import nl.aerius.taskmanager.adaptor.WorkerProducer.WorkerProducerHandler;
 import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
 import nl.aerius.taskmanager.domain.QueueWatchDogListener;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 /**
  * This class provides the input for the {@link TaskManagerUsageMetricsProvider}. It will register updates on the amount of worker/workers from
@@ -69,12 +70,14 @@ public class TaskManagerMetricsRegister implements WorkerProducerHandler, Worker
   }
 
   @Override
-  public synchronized void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, final int numberOfMessagesInProgress) {
-    this.numberOfWorkers = numberOfWorkers;
-    if (!startupGuard.isOpen() && numberOfMessages > 0) {
+  public void onNumberOfWorkersUpdate(final RabbitMQQueueStatus queueStatus) {
+    this.numberOfWorkers = queueStatus.consumers();
+    final int messages = queueStatus.messages();
+
+    if (!startupGuard.isOpen() && messages > 0) {
       LOG.info("Queue {} will be started with {} messages already on the queue.", taskManagerUsageMetricsProvider.getWorkerQueueName(),
-          numberOfMessages);
-      taskManagerUsageMetricsProvider.register(numberOfMessages, numberOfWorkers);
+          messages);
+      taskManagerUsageMetricsProvider.register(messages, numberOfWorkers);
     }
   }
 

@@ -22,6 +22,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.http.HttpHost;
@@ -44,16 +46,17 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
-import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
 import nl.aerius.taskmanager.client.configuration.ConnectionConfiguration;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 /**
  * RabbitMQ implementation to manage implementation specific part of the worker pool. This covers managing the total size of available workers and
  * informing the worker pool when a worker is finished.
  * <p>When the connection shuts down this pool manager will shutdown.
  */
-public class RabbitMQQueueMonitor {
+class RabbitMQQueueMonitor {
 
   private static final Logger LOG = LoggerFactory.getLogger(RabbitMQQueueMonitor.class);
 
@@ -104,28 +107,42 @@ public class RabbitMQQueueMonitor {
     }
   }
 
-  public void updateWorkerQueueState(final String queueName, final WorkerSizeObserver observer) {
+  public Map<String, RabbitMQQueueStatus> getWorkerQueueStates() {
     // Use RabbitMQ HTTP-API.
-    // URL: [host]:[port]/api/queues/[virtualHost]/[QueueName]
+    //     URL: [host]:[port]/api/queues/[virtualHost]/[QueueName]
     final String virtualHost = configuration.getBrokerVirtualHost().replace("/", "%2f");
-    final String apiPath = String.format("/api/queues/%s/%s", virtualHost, queueName);
+    //    final String apiPath = String.format();
 
     try {
-      final JsonNode jsonObject = getJsonResultFromApi(apiPath);
+      final JsonNode jsonObject = getJsonResultFromApi("/api/queues");
 
       if (jsonObject == null) {
         LOG.error("Queue configuration from RabbitMQ admin json get call returned null.");
-      } else {
-        final int numberOfWorkers = getJsonIntPrimitive(jsonObject, "consumers");
-        final int numberOfMessages = getJsonIntPrimitive(jsonObject, "messages");
-        final int numberOfMessagesInProgress = getJsonIntPrimitive(jsonObject, "messages_unacknowledged");
+      } if (jsonObject instanceof final ArrayNode array) {
+        final Map<String, RabbitMQQueueStatus> queueStates = new HashMap<>();
 
-        observer.onNumberOfWorkersUpdate(numberOfWorkers, numberOfMessages, numberOfMessagesInProgress);
-        LOG.trace("[{}] active workers:{}", queueName, numberOfWorkers);
+        for (int i = 0; i < array.size(); i++) {
+          addQueueState(queueStates, array.get(i));
+        }
+        return queueStates;
       }
     } catch (final URISyntaxException | IOException e) {
       LOG.info("Error getting RabbitMQ status from admin api: {}", e.getMessage());
     }
+    return Map.of();
+  }
+
+  private static void addQueueState(final Map<String, RabbitMQQueueStatus> queueStates, final JsonNode jsonNode) {
+    final String queueName = getJsonString(jsonNode, "name");
+    final int consumers = getJsonIntPrimitive(jsonNode, "consumers");
+    final int mesages = getJsonIntPrimitive(jsonNode, "messages");
+    final int unacknowledged = getJsonIntPrimitive(jsonNode, "messages_unacknowledged");
+
+    queueStates.put(queueName, new RabbitMQQueueStatus(consumers, mesages, unacknowledged));
+  }
+
+  private static String getJsonString(final JsonNode jsonObject, final String key) {
+    return jsonObject == null || !jsonObject.has(key) ? "" : jsonObject.get(key).asText();
   }
 
   private static int getJsonIntPrimitive(final JsonNode jsonObject, final String key) {

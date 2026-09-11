@@ -203,7 +203,7 @@ class PriorityTaskScheduler implements TaskScheduler<PriorityTaskQueue>, Compara
     try {
       final String queueName = priorityTaskQueue.getQueueName();
       if (!priorityQueueMap.containsKey(queueName)) {
-        metrics.addMetric(() -> priorityQueueMap.onWorkerByQueue(queueName), workerQueueName, queueName);
+        metrics.addMetricUsed(() -> priorityQueueMap.onWorkerByQueue(queueName), workerQueueName, queueName);
         if (this.queue instanceof final GroupedPriorityQueue gpq) {
           metrics.addMetricWaiting(() -> gpq.getGroupSize(), workerQueueName, queueName);
         }
