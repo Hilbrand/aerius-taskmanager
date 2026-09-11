@@ -143,28 +143,28 @@ public class PerformanceMetricsReporter implements WorkerProducerHandler, QueueW
 
   private synchronized void update() {
     try {
-      metrics(DISPATCH, dispatchedQueueMetrics, dispatchedWorkerCountGauge, dispatchedWorkerWaitGauge);
-      metrics(DISPATCH, dispatchedQueueCountGauge, dispatchedQueueWaitGauge, queueGroupName, dispatchedWorkerMetrics);
-      metrics(WORK, workQueueMetrics, workWorkerCountGauge, workWorkerDurationGauge);
-      metrics(WORK, workQueueCountGauge, workQueueDurationGauge, queueGroupName, workWorkerMetrics);
+      metrics(DISPATCH, dispatchedWorkerCountGauge, dispatchedWorkerWaitGauge, queueGroupName, dispatchedWorkerMetrics);
+      metrics(DISPATCH, dispatchedQueueCountGauge, dispatchedQueueWaitGauge, dispatchedQueueMetrics);
+      metrics(WORK, workWorkerCountGauge, workWorkerDurationGauge, queueGroupName, workWorkerMetrics);
+      metrics(WORK, workQueueCountGauge, workQueueDurationGauge, workQueueMetrics);
     } catch (final RuntimeException e) {
       LOG.error("Update metrics failed.", e);
     }
   }
 
-  private static void metrics(final String prefixText, final Map<String, DurationMetric> metrics, final DoubleGauge gauge,
-      final DoubleGauge waitGauge) {
+  private static void metrics(final String prefixText, final DoubleGauge countGauge, final DoubleGauge waitGauge,
+      final Map<String, DurationMetric> metrics) {
     for (final Entry<String, DurationMetric> entry : metrics.entrySet()) {
-      metrics(prefixText, gauge, waitGauge, entry.getKey(), entry.getValue());
+      metrics(prefixText, countGauge, waitGauge, entry.getKey(), entry.getValue());
     }
   }
 
-  private static void metrics(final String prefixText, final DoubleGauge gauge, final DoubleGauge averageGauge, final String name,
+  private static void metrics(final String prefixText, final DoubleGauge countGauge, final DoubleGauge averageGauge, final String name,
       final DurationMetric metrics) {
     final DurationMetricValue metric = metrics.process();
     final int count = metric.count();
 
-    gauge.set(count, metrics.getAttributes());
+    countGauge.set(count, metrics.getAttributes());
     averageGauge.set(metric.avgDuration(), metrics.getAttributes());
     if (count > 0) {
       LOG.debug("{} for {}: {} ms/task (#tasks: {})", prefixText, name, metric.avgDuration(), count);
