@@ -18,6 +18,8 @@ package nl.aerius.taskmanager.metrics;
 
 import java.util.function.ToDoubleBiFunction;
 
+import nl.aerius.taskmanager.scheduler.TaskScheduler;
+
 /**
  * The {@link UsageMetricsProvider} for weighted load. limit and usage metrics for worker queues.
  * The values are calculated averages over the time between the last measurement point and the moment the metric value is requested.
@@ -33,9 +35,13 @@ public class TaskManagerUsageMetricsProvider implements UsageMetricsProvider {
   private final LoadMetric used;
   private final LoadMetric free;
 
-  public TaskManagerUsageMetricsProvider(final String workerQueueName) {
+  public TaskManagerUsageMetricsProvider(final String workerQueueName, final TaskScheduler taskScheduler) {
     this.workerQueueName = workerQueueName;
-    load = new LoadMetric((numberOfWorkers, usedWorkers) -> (numberOfWorkers > 0 ? (usedWorkers / (double) numberOfWorkers) : 0), LOAD_SUM_FUNCTION);
+    final ToDoubleBiFunction<Integer, Integer> loadCountFuction = (numberOfWorkers, usedWorkers) -> numberOfWorkers == 0
+        ? (taskScheduler.isQueueEmpty() ? 0 : 1.0)
+        : (usedWorkers / (double) numberOfWorkers);
+
+    load = new LoadMetric(loadCountFuction, LOAD_SUM_FUNCTION);
     limit = new LoadMetric((numberOfWorkers, usedWorkers) -> numberOfWorkers, COUNT_SUM_FUNCTION);
     used = new LoadMetric((numberOfWorkers, usedWorkers) -> usedWorkers, COUNT_SUM_FUNCTION);
     free = new LoadMetric((numberOfWorkers, usedWorkers) -> numberOfWorkers - usedWorkers, COUNT_SUM_FUNCTION);

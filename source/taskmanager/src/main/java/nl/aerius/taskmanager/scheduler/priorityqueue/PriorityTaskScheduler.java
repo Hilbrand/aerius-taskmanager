@@ -117,6 +117,11 @@ class PriorityTaskScheduler implements TaskScheduler<PriorityTaskQueue>, Compara
     return task;
   }
 
+  @Override
+  public boolean isQueueEmpty() {
+    return queue.isEmpty();
+  }
+
   private void obtainTask() {
     final Task task = queue.poll();
 

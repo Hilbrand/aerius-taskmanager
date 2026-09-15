@@ -58,6 +58,8 @@ public interface TaskScheduler<T extends TaskQueue> extends WorkerUpdateHandler,
    */
   void updateQueue(T taskQueue);
 
+  boolean isQueueEmpty();
+
   /**
    * Remove the given task queue
    *

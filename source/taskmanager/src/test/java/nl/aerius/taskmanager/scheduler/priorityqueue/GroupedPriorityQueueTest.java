@@ -17,7 +17,9 @@
 package nl.aerius.taskmanager.scheduler.priorityqueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -49,11 +51,13 @@ class GroupedPriorityQueueTest {
     queue.add(task5);
 
     assertNotNull(queue.peek(), "Queue should have task at the queue.");
+    assertFalse(queue.isEmpty(), "Queue should not be empty.");
     assertEquals(task1, queue.poll(), "Poll should return first task added.");
     assertEquals(task3, queue.poll(), "Poll should return first task of task with correlationId 2.");
     assertEquals(task2, queue.poll(), "Poll should return second task of correlationId 1, because it's at the front of the queue.");
     assertEquals(task4, queue.poll(), "Poll should return second task of correlationId 2, because it should be at front of the queue.");
     assertEquals(task5, queue.poll(), "Poll should return last added task.");
+    assertTrue(queue.isEmpty(), "Queue should be empty after all tasks taken from the queue.");
   }
 
   private static Task mockTask(final String correlationId) {
