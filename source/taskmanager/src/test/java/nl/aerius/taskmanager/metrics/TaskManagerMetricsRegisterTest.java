@@ -45,7 +45,8 @@ public class TaskManagerMetricsRegisterTest {
 
   private @Mock TaskManagerUsageMetricsProvider taskManagerUsageMetricsProvider;
 
-  private @Captor ArgumentCaptor<Integer> taskManagerUsagerMetricsProviderCaptor;
+  private @Captor ArgumentCaptor<Integer> startUpNrOfMessagesCaptor;
+  private @Captor ArgumentCaptor<Integer> lastNrOfMessagesCaptor;
 
   private StartupGuard startupGuard;
   private TaskManagerMetricsRegister register;
@@ -59,18 +60,29 @@ public class TaskManagerMetricsRegisterTest {
   @Test
   void testOnWorkDispatched() {
     startUp(10, 0);
+    // Should have called register only once, but with 0 delta
+    verifyTaskManagerUsageMetricsProvider(1, 0, startUpNrOfMessagesCaptor);
     register.onWorkDispatched("1", createMap(QUEUE_1, 100L));
     register.onWorkDispatched("2", createMap(QUEUE_2, 200L));
-    verifyTaskManagerUsageMetricsProvider(2, 2);
+    register.onNumberOfWorkersUpdate(10, 2, 2);
+    // Should have called register 4 times (startup, 2 for dispatch and 1 for update.
+    // But total delta should be +2 for the 2 dispatched messages.
+    verifyTaskManagerUsageMetricsProvider(4, 2, lastNrOfMessagesCaptor);
   }
 
   @Test
   void testOnWorkerFinished() {
-    startUp(2, 0);
+    startUp(2, 2);
+    // Should have called register only once, but with 2 as delta as it should match total number of messages.
+    verifyTaskManagerUsageMetricsProvider(1, 2, startUpNrOfMessagesCaptor);
     register.onWorkDispatched("1", createMap(QUEUE_1, 100L));
     register.onWorkerFinished("1", createMap(QUEUE_1, 100L));
     register.onWorkerFinished("2", createMap(QUEUE_2, 200L));
-    verifyTaskManagerUsageMetricsProvider(2, 0);
+    register.onNumberOfWorkersUpdate(10, 2, 2);
+
+    // Should have called register 5 times (startup, 1 for dispatch, 2 for finished and 1 for update.
+    // But total delta should be 0 for 2 startup + 1 dispatch - 2 for finish..
+    verifyTaskManagerUsageMetricsProvider(5, 1, lastNrOfMessagesCaptor);
   }
 
   @Test
@@ -85,10 +97,9 @@ public class TaskManagerMetricsRegisterTest {
     verify(taskManagerUsageMetricsProvider, times(1)).reset();
   }
 
-  private void verifyTaskManagerUsageMetricsProvider(final int times, final int sum) {
-    verify(taskManagerUsageMetricsProvider, times(times)).register(taskManagerUsagerMetricsProviderCaptor.capture(),
-        anyInt());
-    assertEquals(sum, taskManagerUsagerMetricsProviderCaptor.getAllValues().stream().mapToInt(Integer::intValue).sum(),
+  private void verifyTaskManagerUsageMetricsProvider(final int times, final int sum, final ArgumentCaptor<Integer> captor) {
+    verify(taskManagerUsageMetricsProvider, times(times)).register(captor.capture(), anyInt());
+    assertEquals(sum, captor.getAllValues().stream().mapToInt(Integer::intValue).sum(),
         "Should have registered a total sum of " + sum);
   }
 
