@@ -21,15 +21,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
 import nl.aerius.taskmanager.client.configuration.ConnectionConfiguration;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 /**
  * Test class for {@link RabbitMQQueueMonitor}.
@@ -43,8 +42,6 @@ class RabbitMQQueueMonitorTest {
   void testGetWorkerQueueState() {
     final ConnectionConfiguration configuration = ConnectionConfiguration.builder()
         .brokerHost(DUMMY).brokerPort(0).brokerUsername(DUMMY).brokerPassword(DUMMY).build();
-    final AtomicInteger workerSize = new AtomicInteger();
-    final WorkerSizeObserver mwps = (numberOfWorkers, numberOfMessages, numberOfMessagesInProgress) -> workerSize.set(numberOfWorkers);
     final RabbitMQQueueMonitor rpm = new RabbitMQQueueMonitor(configuration) {
       @Override
       protected JsonNode getJsonResultFromApi(final String apiPath) throws IOException {
@@ -55,8 +52,8 @@ class RabbitMQQueueMonitorTest {
       }
     };
     try {
-      rpm.updateWorkerQueueState(DUMMY, mwps);
-      assertEquals(4, workerSize.get(), "Number of workers");
+      final RabbitMQQueueStatus status = rpm.getWorkerQueueState(DUMMY);
+      assertEquals(4, status.consumers(), "Number of workers");
     } finally {
       rpm.shutdown();
     }

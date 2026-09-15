@@ -14,19 +14,10 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
-package nl.aerius.taskmanager.adaptor;
-
-import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
+package nl.aerius.taskmanager.domain;
 
 /**
- * Interface called to observer the number of workers.
+ * Data record containing several collected metrics from the admin API of a single RabbitMQ queue.
  */
-public interface WorkerSizeObserver {
-
-  /**
-   * Gives metrics on a RabbitMQ queue.
-   *
-   * @param queueStatus RabbitMQ status metrics
-   */
-  void onNumberOfWorkersUpdate(RabbitMQQueueStatus queueStatus);
+public record RabbitMQQueueStatus(int consumers, int messages, int unacknowledged) {
 }

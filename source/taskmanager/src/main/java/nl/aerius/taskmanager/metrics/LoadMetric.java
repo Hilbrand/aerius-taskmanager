@@ -52,6 +52,16 @@ class LoadMetric {
   private final ToDoubleBiFunction<Double, Long> sumFunction;
   private final Object lock = new Object();
 
+  /**
+   * Constructor
+   *
+   * @param countFunction Returns the value to use a count in the previous time frame. It gets 2 parameters
+   *     - numberOfWorkers: The number of workers available in the last time period.
+   *     - usedWorkers: The number of workers used in the last time period.
+   * @param sumFunction Returns the average value to report based on the 2 parameters:
+   *     - total: the sum of all counts since the last time this metric was requested.
+   *     - totalMeasureTime: the total time since the last time this metric was requested.
+   */
   public LoadMetric(final ToDoubleBiFunction<Integer, Integer> countFunction, final ToDoubleBiFunction<Double, Long> sumFunction) {
     this.countFunction = countFunction;
     this.sumFunction = sumFunction;

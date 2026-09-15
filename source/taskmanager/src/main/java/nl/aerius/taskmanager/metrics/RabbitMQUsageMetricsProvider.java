@@ -17,24 +17,21 @@
 package nl.aerius.taskmanager.metrics;
 
 import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 public class RabbitMQUsageMetricsProvider implements WorkerSizeObserver, UsageMetricsProvider {
 
   private final String workerQueueName;
 
-  private int numberOfWorkers;
-  private int numberOfMessages;
-  private int numberOfMessagesInProgress;
+  private RabbitMQQueueStatus queueStatus = new RabbitMQQueueStatus(0,0,0);
 
   public RabbitMQUsageMetricsProvider(final String workerQueueName) {
     this.workerQueueName = workerQueueName;
   }
 
   @Override
-  public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, final int numberOfMessagesInProgress) {
-    this.numberOfWorkers = numberOfWorkers;
-    this.numberOfMessages = numberOfMessages;
-    this.numberOfMessagesInProgress = numberOfMessagesInProgress;
+  public void onNumberOfWorkersUpdate(final RabbitMQQueueStatus queueStatus) {
+    this.queueStatus = queueStatus;
   }
 
   @Override
@@ -44,22 +41,22 @@ public class RabbitMQUsageMetricsProvider implements WorkerSizeObserver, UsageMe
 
   @Override
   public int getNumberOfWorkers() {
-    return numberOfWorkers;
+    return queueStatus.consumers();
   }
 
   @Override
   public int getNumberOfUsedWorkers() {
-    return numberOfMessagesInProgress;
+    return queueStatus.unacknowledged();
   }
 
   @Override
   public int getNumberOfFreeWorkers() {
-    return Math.max(0, numberOfWorkers - numberOfMessagesInProgress);
+    return Math.max(0, getNumberOfWorkers() - getNumberOfUsedWorkers());
   }
 
   @Override
   public int getNumberOfWaiting() {
-    return Math.max(0, numberOfMessages - numberOfMessagesInProgress);
+    return Math.max(0, queueStatus.messages() - getNumberOfUsedWorkers());
   }
 
 }
