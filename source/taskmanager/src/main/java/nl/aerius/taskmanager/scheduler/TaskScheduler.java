@@ -17,6 +17,7 @@
 package nl.aerius.taskmanager.scheduler;
 
 import nl.aerius.taskmanager.domain.QueueConfig;
+import nl.aerius.taskmanager.domain.QueueEmptyCheck;
 import nl.aerius.taskmanager.domain.QueueWatchDogListener;
 import nl.aerius.taskmanager.domain.Task;
 import nl.aerius.taskmanager.domain.TaskQueue;
@@ -27,7 +28,7 @@ import nl.aerius.taskmanager.domain.WorkerUpdateHandler;
  * Interface for the scheduling algorithm. The implementation should maintain an internal list of all tasks added and return the task to be processed
  * in {@link #getNextTask()} based on whatever priority algorithm the scheduler implements.
  */
-public interface TaskScheduler<T extends TaskQueue> extends WorkerUpdateHandler, QueueWatchDogListener {
+public interface TaskScheduler<T extends TaskQueue> extends WorkerUpdateHandler, QueueWatchDogListener, QueueEmptyCheck {
 
   /**
    * Adds a Task to the scheduler to being processed. The scheduler will return this task in {@link #getNextTask()}

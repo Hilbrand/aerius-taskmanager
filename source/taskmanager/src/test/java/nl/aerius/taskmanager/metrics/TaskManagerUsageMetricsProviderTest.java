@@ -23,16 +23,21 @@ import java.util.function.DoubleSupplier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import nl.aerius.taskmanager.domain.QueueEmptyCheck;
+
 /**
  * Test class for {@link TaskManagerUsageMetricsProvider}.
  */
 class TaskManagerUsageMetricsProviderTest {
 
+  private boolean queuEmpty;
+  private final QueueEmptyCheck emptyChecker = () -> queuEmpty;
   private TaskManagerUsageMetricsProvider provider;
 
   @BeforeEach
   void beforeEach() {
-    provider = new TaskManagerUsageMetricsProvider("TEST");
+    provider = new TaskManagerUsageMetricsProvider("TEST", emptyChecker);
+    queuEmpty = true;
   }
 
   @Test
@@ -53,6 +58,12 @@ class TaskManagerUsageMetricsProviderTest {
   @Test
   void testNumberOfFreeWorkers() throws InterruptedException {
     assertMetricAndZero(3, 10, provider::getNumberOfFreeWorkers, 7, "Expected 7 worker to be free.", 10);
+  }
+
+  @Test
+  void testZeroWorkersNoEmptyQueue() throws InterruptedException {
+    queuEmpty = false;
+    assertMetric(10, 0, provider::getLoad, 100, "Expected a load of 100%", 100);
   }
 
   private void assertMetricAndZero(final int numberOfUsed, final int numberOfWorkers, final DoubleSupplier supplier, final int expected,

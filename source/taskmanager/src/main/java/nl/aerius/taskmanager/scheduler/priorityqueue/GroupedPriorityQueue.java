@@ -111,7 +111,7 @@ class GroupedPriorityQueue implements Queue<Task> {
 
   @Override
   public boolean isEmpty() {
-    throw new UnsupportedOperationException("Not implemented");
+    return queue.isEmpty() && groupedQueue.isEmpty();
   }
 
   @Override

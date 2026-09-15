@@ -50,6 +50,11 @@ public class MockTaskScheduler implements TaskScheduler<PriorityTaskQueue> {
   }
 
   @Override
+  public boolean isQueueEmpty() {
+    return tasks.isEmpty();
+  }
+
+  @Override
   public void updateQueue(final PriorityTaskQueue queue) {
     // Not used
   }
