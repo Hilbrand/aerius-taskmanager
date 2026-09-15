@@ -23,12 +23,12 @@ import io.opentelemetry.api.metrics.Meter;
  * The metrics supported are limit (i.e. number of workers available).
  *
  */
-class UsageMetricsWrapper {
+class WorkerUsageMetricsWrapper {
   private final boolean hasWaiting;
   private final UsageMetricsReporter limitReporter;
   private final UsageMetricsReporter usageReporter;
 
-  public UsageMetricsWrapper(final Meter meter, final String metricPrefix, final boolean hasWaiting) {
+  public WorkerUsageMetricsWrapper(final Meter meter, final String metricPrefix, final boolean hasWaiting) {
     this.hasWaiting = hasWaiting;
     limitReporter = new UsageMetricsReporter(meter, metricPrefix + ".worker.limit", "Report nunber of workers available");
     usageReporter = new UsageMetricsReporter(meter, metricPrefix + ".worker.usage", "Report worker usage");

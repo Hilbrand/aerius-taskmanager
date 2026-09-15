@@ -17,14 +17,11 @@
 package nl.aerius.taskmanager.metrics;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.DoubleSupplier;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.Meter;
@@ -37,11 +34,9 @@ import io.opentelemetry.api.metrics.ObservableDoubleMeasurement;
  */
 class UsageMetricsReporter {
 
-  private static final Logger LOG = LoggerFactory.getLogger(UsageMetricsReporter.class);
-
   private record UsageMetric(DoubleSupplier metricSupplier, Attributes attributes) {}
 
-  private final Map<String, List<UsageMetric>> metricsMap = new HashMap<>();
+  private final Map<String, List<UsageMetric>> metricsMap = new ConcurrentHashMap<>();
   private final ObservableDoubleGauge gauge;
 
   public UsageMetricsReporter(final Meter meter, final String metricName, final String description) {

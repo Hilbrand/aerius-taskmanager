@@ -22,6 +22,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.http.HttpHost;
@@ -44,16 +46,17 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
-import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
 import nl.aerius.taskmanager.client.configuration.ConnectionConfiguration;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 
 /**
  * RabbitMQ implementation to manage implementation specific part of the worker pool. This covers managing the total size of available workers and
  * informing the worker pool when a worker is finished.
  * <p>When the connection shuts down this pool manager will shutdown.
  */
-public class RabbitMQQueueMonitor {
+class RabbitMQQueueMonitor {
 
   private static final Logger LOG = LoggerFactory.getLogger(RabbitMQQueueMonitor.class);
 
@@ -104,28 +107,66 @@ public class RabbitMQQueueMonitor {
     }
   }
 
-  public void updateWorkerQueueState(final String queueName, final WorkerSizeObserver observer) {
+  /**
+   * Retrieves the queue status for the given queue from the RabbitMQ admin api.
+   *
+   * @param queueName name of the queue to get the statuss
+   * @return Status of the queue
+   */
+  public RabbitMQQueueStatus getWorkerQueueState(final String queueName) {
     // Use RabbitMQ HTTP-API.
     // URL: [host]:[port]/api/queues/[virtualHost]/[QueueName]
     final String virtualHost = configuration.getBrokerVirtualHost().replace("/", "%2f");
     final String apiPath = String.format("/api/queues/%s/%s", virtualHost, queueName);
 
     try {
-      final JsonNode jsonObject = getJsonResultFromApi(apiPath);
+      final JsonNode jsonNode = getJsonResultFromApi(apiPath);
 
-      if (jsonObject == null) {
+      if (jsonNode == null) {
         LOG.error("Queue configuration from RabbitMQ admin json get call returned null.");
       } else {
-        final int numberOfWorkers = getJsonIntPrimitive(jsonObject, "consumers");
-        final int numberOfMessages = getJsonIntPrimitive(jsonObject, "messages");
-        final int numberOfMessagesInProgress = getJsonIntPrimitive(jsonObject, "messages_unacknowledged");
-
-        observer.onNumberOfWorkersUpdate(numberOfWorkers, numberOfMessages, numberOfMessagesInProgress);
-        LOG.trace("[{}] active workers:{}", queueName, numberOfWorkers);
+        return getQueueStatus(jsonNode);
       }
     } catch (final URISyntaxException | IOException e) {
       LOG.info("Error getting RabbitMQ status from admin api: {}", e.getMessage());
     }
+    return null;
+  }
+
+  /**
+   * Retrieves the status for all queues from the RabbitMQ admin api.
+   */
+  public Map<String, RabbitMQQueueStatus> getWorkerQueueStates() {
+    try {
+      final JsonNode jsonObject = getJsonResultFromApi("/api/queues");
+
+      if (jsonObject == null) {
+        LOG.error("Queue configuration from RabbitMQ admin json get call returned null.");
+      } if (jsonObject instanceof final ArrayNode array) {
+        final Map<String, RabbitMQQueueStatus> queueStates = new HashMap<>();
+
+        for (int i = 0; i < array.size(); i++) {
+          final JsonNode jsonNode = array.get(i);
+          queueStates.put(getJsonString(jsonNode, "name"), getQueueStatus(jsonNode));
+        }
+        return queueStates;
+      }
+    } catch (final URISyntaxException | IOException e) {
+      LOG.info("Error getting RabbitMQ status from admin api: {}", e.getMessage());
+    }
+    return new HashMap<>();
+  }
+
+  private static RabbitMQQueueStatus getQueueStatus(final JsonNode jsonNode) {
+    final int consumers = getJsonIntPrimitive(jsonNode, "consumers");
+    final int mesages = getJsonIntPrimitive(jsonNode, "messages");
+    final int unacknowledged = getJsonIntPrimitive(jsonNode, "messages_unacknowledged");
+
+    return new RabbitMQQueueStatus(consumers, mesages, unacknowledged);
+  }
+
+  private static String getJsonString(final JsonNode jsonObject, final String key) {
+    return jsonObject == null || !jsonObject.has(key) ? "" : jsonObject.get(key).asText();
   }
 
   private static int getJsonIntPrimitive(final JsonNode jsonObject, final String key) {

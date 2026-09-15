@@ -20,19 +20,19 @@ import io.opentelemetry.api.metrics.Meter;
 
 /**
  * Class that wraps all Task Manager usage metrics reporters. TaskSchedulerBuckets should add the metric providers to this class.
- * Each of those providers added is for a specific worker queue. The {@link UsageMetricsWrapper} will manager metrics per worker queue.
+ * Each of those providers added is for a specific worker queue. The {@link WorkerUsageMetricsWrapper} will manager metrics per worker queue.
  */
 public class TaskManagerUsageMetricsWrapper {
 
-  private final UsageMetricsWrapper rabbitMQUsageMetrics;
-  private final UsageMetricsWrapper workerPoolUsageMetrics;
-  private final UsageMetricsWrapper taskManagerUsageMetrics;
+  private final WorkerUsageMetricsWrapper rabbitMQUsageMetrics;
+  private final WorkerUsageMetricsWrapper workerPoolUsageMetrics;
+  private final WorkerUsageMetricsWrapper taskManagerUsageMetrics;
   private final UsageMetricsReporter loadUsageMetricsReporter;
 
   public TaskManagerUsageMetricsWrapper(final Meter meter) {
-    rabbitMQUsageMetrics = new UsageMetricsWrapper(meter, "aer.rabbitmq", true);
-    workerPoolUsageMetrics = new UsageMetricsWrapper(meter, "aer.taskmanager.workerpool", false);
-    taskManagerUsageMetrics = new UsageMetricsWrapper(meter, "aer.taskmanager", false);
+    rabbitMQUsageMetrics = new WorkerUsageMetricsWrapper(meter, "aer.rabbitmq", true);
+    workerPoolUsageMetrics = new WorkerUsageMetricsWrapper(meter, "aer.taskmanager.workerpool", false);
+    taskManagerUsageMetrics = new WorkerUsageMetricsWrapper(meter, "aer.taskmanager", false);
     loadUsageMetricsReporter = new UsageMetricsReporter(meter, "aer.taskmanager.work.load", "Report average worker load");
   }
 

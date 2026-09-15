@@ -30,6 +30,7 @@ import nl.aerius.taskmanager.adaptor.WorkerProducer.WorkerMetrics;
 import nl.aerius.taskmanager.adaptor.WorkerProducer.WorkerProducerHandler;
 import nl.aerius.taskmanager.adaptor.WorkerSizeObserver;
 import nl.aerius.taskmanager.domain.QueueWatchDogListener;
+import nl.aerius.taskmanager.domain.RabbitMQQueueStatus;
 import nl.aerius.taskmanager.domain.Task;
 import nl.aerius.taskmanager.domain.TaskRecord;
 import nl.aerius.taskmanager.domain.WorkerUpdateHandler;
@@ -178,13 +179,13 @@ class WorkerPool implements WorkerSizeObserver, WorkerProducerHandler, UsageMetr
   }
 
   @Override
-  public void onNumberOfWorkersUpdate(final int numberOfWorkers, final int numberOfMessages, final int numberOfMessagesInProgress) {
+  public void onNumberOfWorkersUpdate(final RabbitMQQueueStatus queueStatus) {
     synchronized (this) {
       if (!firstUpdateReceived) {
-        initialUnaccountedWorkers = numberOfMessages;
+        initialUnaccountedWorkers = queueStatus.messages();
         firstUpdateReceived = true;
       }
-      updateNumberOfWorkers(numberOfWorkers);
+      updateNumberOfWorkers(queueStatus.consumers());
     }
   }
 
